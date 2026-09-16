@@ -1,188 +1,121 @@
-// ---- Setup ----
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const emojis = ['🍕','🎮','🚀','🐶','🎵','🌈','⚽','🍩'];
+const cardValues = [...emojis, ...emojis]; // 8 pairs = 16 cards
 
-const gridSize = 20;              // size of each cell in px
-const tileCount = canvas.width / gridSize; // 20x20 grid
+let board = document.getElementById('board');
+let movesEl = document.getElementById('moves');
+let timerEl = document.getElementById('timer');
+let winOverlay = document.getElementById('winOverlay');
+let winStats = document.getElementById('winStats');
 
-const scoreEl = document.getElementById('score');
-const highScoreEl = document.getElementById('highScore');
-const overlay = document.getElementById('overlay');
-const overlayTitle = document.getElementById('overlayTitle');
-const overlayText = document.getElementById('overlayText');
-const startBtn = document.getElementById('startBtn');
+let flippedCards = [];
+let matchedCount = 0;
+let moves = 0;
+let seconds = 0;
+let timerInterval = null;
+let lockBoard = false;
 
-let snake, direction, nextDirection, food, score, highScore;
-let gameRunning = false;
-let paused = false;
-let gameSpeed = 120; // ms per frame, lower = faster
-let loopId = null;
-
-highScore = parseInt(localStorage.getItem('snakeHighScore')) || 0;
-highScoreEl.textContent = highScore;
-
-// ---- Game Init ----
-function initGame() {
-  snake = [
-    { x: 10, y: 10 },
-    { x: 9, y: 10 },
-    { x: 8, y: 10 }
-  ];
-  direction = { x: 1, y: 0 };
-  nextDirection = { x: 1, y: 0 };
-  score = 0;
-  gameSpeed = 120;
-  scoreEl.textContent = score;
-  placeFood();
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
 }
 
-function placeFood() {
-  let valid = false;
-  while (!valid) {
-    food = {
-      x: Math.floor(Math.random() * tileCount),
-      y: Math.floor(Math.random() * tileCount)
-    };
-    valid = !snake.some(seg => seg.x === food.x && seg.y === food.y);
-  }
-}
+function createBoard() {
+  board.innerHTML = '';
+  const shuffled = shuffle([...cardValues]);
 
-// ---- Game Loop ----
-function gameLoop() {
-  if (!gameRunning || paused) return;
+  shuffled.forEach((value) => {
+    const card = document.createElement('div');
+    card.classList.add('card');
+    card.dataset.value = value;
 
-  direction = nextDirection;
-  const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+    card.innerHTML = `
+      <div class="card-inner">
+        <div class="card-front">❓</div>
+        <div class="card-back">${value}</div>
+      </div>
+    `;
 
-  // Wall collision
-  if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
-    return endGame();
-  }
-
-  // Self collision
-  if (snake.some(seg => seg.x === head.x && seg.y === head.y)) {
-    return endGame();
-  }
-
-  snake.unshift(head);
-
-  // Food collision
-  if (head.x === food.x && head.y === food.y) {
-    score += 10;
-    scoreEl.textContent = score;
-    placeFood();
-    // Speed up slightly every 50 points, with a floor
-    if (gameSpeed > 60) gameSpeed -= 3;
-  } else {
-    snake.pop();
-  }
-
-  draw();
-  loopId = setTimeout(gameLoop, gameSpeed);
-}
-
-// ---- Drawing ----
-function draw() {
-  ctx.fillStyle = '#111827';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Draw food
-  ctx.fillStyle = '#f87171';
-  ctx.beginPath();
-  const fx = food.x * gridSize + gridSize / 2;
-  const fy = food.y * gridSize + gridSize / 2;
-  ctx.arc(fx, fy, gridSize / 2 - 2, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Draw snake
-  snake.forEach((seg, i) => {
-    ctx.fillStyle = i === 0 ? '#4ade80' : '#22c55e';
-    ctx.fillRect(
-      seg.x * gridSize + 1,
-      seg.y * gridSize + 1,
-      gridSize - 2,
-      gridSize - 2
-    );
+    card.addEventListener('click', () => flipCard(card));
+    board.appendChild(card);
   });
 }
 
-// ---- Game State ----
-function startGame() {
-  initGame();
-  gameRunning = true;
-  paused = false;
-  overlay.classList.add('hidden');
-  clearTimeout(loopId);
-  draw();
-  loopId = setTimeout(gameLoop, gameSpeed);
+function flipCard(card) {
+  if (lockBoard) return;
+  if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+  if (timerInterval === null) startTimer();
+
+  card.classList.add('flipped');
+  flippedCards.push(card);
+
+  if (flippedCards.length === 2) {
+    moves++;
+    movesEl.textContent = moves;
+    checkMatch();
+  }
+}
+
+function checkMatch() {
+  const [card1, card2] = flippedCards;
+  const isMatch = card1.dataset.value === card2.dataset.value;
+
+  if (isMatch) {
+    card1.classList.add('matched');
+    card2.classList.add('matched');
+    matchedCount += 2;
+    flippedCards = [];
+
+    if (matchedCount === cardValues.length) {
+      endGame();
+    }
+  } else {
+    lockBoard = true;
+    setTimeout(() => {
+      card1.classList.remove('flipped');
+      card2.classList.remove('flipped');
+      flippedCards = [];
+      lockBoard = false;
+    }, 800);
+  }
+}
+
+function startTimer() {
+  timerInterval = setInterval(() => {
+    seconds++;
+    timerEl.textContent = seconds;
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
 }
 
 function endGame() {
-  gameRunning = false;
-  clearTimeout(loopId);
-
-  if (score > highScore) {
-    highScore = score;
-    localStorage.setItem('snakeHighScore', highScore);
-    highScoreEl.textContent = highScore;
-  }
-
-  overlayTitle.textContent = 'Game Over';
-  overlayText.textContent = `You scored ${score} points. Press Start to play again.`;
-  startBtn.textContent = 'Play Again';
-  overlay.classList.remove('hidden');
+  stopTimer();
+  winStats.textContent = `You finished in ${moves} moves and ${seconds} seconds!`;
+  winOverlay.classList.add('active');
 }
 
-function togglePause() {
-  if (!gameRunning) return;
-  paused = !paused;
-  if (paused) {
-    overlayTitle.textContent = 'Paused';
-    overlayText.textContent = 'Press Space to resume';
-    overlay.classList.remove('hidden');
-  } else {
-    overlay.classList.add('hidden');
-    loopId = setTimeout(gameLoop, gameSpeed);
-  }
+function resetGame() {
+  stopTimer();
+  flippedCards = [];
+  matchedCount = 0;
+  moves = 0;
+  seconds = 0;
+  lockBoard = false;
+  timerInterval = null;
+  movesEl.textContent = 0;
+  timerEl.textContent = 0;
+  winOverlay.classList.remove('active');
+  createBoard();
 }
 
-// ---- Input Handling ----
-function setDirection(x, y) {
-  // Prevent reversing directly into itself
-  if (direction.x === -x && direction.y === -y) return;
-  nextDirection = { x, y };
-}
+document.getElementById('restartBtn').addEventListener('click', resetGame);
+document.getElementById('playAgainBtn').addEventListener('click', resetGame);
 
-document.addEventListener('keydown', (e) => {
-  switch (e.key) {
-    case 'ArrowUp': case 'w': case 'W':
-      setDirection(0, -1); break;
-    case 'ArrowDown': case 's': case 'S':
-      setDirection(0, 1); break;
-    case 'ArrowLeft': case 'a': case 'A':
-      setDirection(-1, 0); break;
-    case 'ArrowRight': case 'd': case 'D':
-      setDirection(1, 0); break;
-    case ' ':
-      e.preventDefault();
-      togglePause();
-      break;
-  }
-
-  // Auto-start on first arrow key press
-  if (!gameRunning && e.key.startsWith('Arrow')) {
-    startGame();
-  }
-});
-
-// Mobile buttons
-document.getElementById('upBtn').addEventListener('click', () => setDirection(0, -1));
-document.getElementById('downBtn').addEventListener('click', () => setDirection(0, 1));
-document.getElementById('leftBtn').addEventListener('click', () => setDirection(-1, 0));
-document.getElementById('rightBtn').addEventListener('click', () => setDirection(1, 0));
-
-startBtn.addEventListener('click', startGame);
-
-// Initial draw before game starts
-initGame();
-draw();
+createBoard();
