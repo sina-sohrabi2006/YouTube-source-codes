@@ -3,26 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Memory Match Game</title>
+<title>Connect Four</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="game-container">
-  <h1>🧠 Memory Match</h1>
+  <h1>🔴 Connect Four 🟡</h1>
+  
+  <div class="status" id="status">Player Red's Turn</div>
 
-  <div class="stats">
-    <div>Moves: <span id="moves">0</span></div>
-    <div>Time: <span id="timer">0</span>s</div>
-    <button id="restartBtn">Restart</button>
-  </div>
+  <button id="restartBtn">Restart Game</button>
+
 
   <div class="board" id="board"></div>
 
+
   <div class="win-overlay" id="winOverlay">
     <div class="win-box">
-      <h2>🎉 You Win!</h2>
-      <p id="winStats"></p>
+      <h2 id="winMessage"></h2>
       <button id="playAgainBtn">Play Again</button>
     </div>
   </div>

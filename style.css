@@ -9,33 +9,77 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
   font-family: 'Segoe UI', Arial, sans-serif;
 }
 
 .game-container {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   color: white;
   padding: 20px;
 }
 
 h1 {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   font-size: 2rem;
   text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
-.stats {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 20px;
-  font-size: 1.1rem;
+.status {
+  font-size: 1.3rem;
+  margin-bottom: 2px;
+  font-weight: bold;
+  min-height: 30px;
 }
 
-.stats button {
-  padding: 8px 16px;
+.board {
+  display: inline-grid;
+  grid-template-columns: repeat(7, 60px);
+  grid-template-rows: repeat(6, 60px);
+  gap: 8px;
+  background: #003366;
+  padding: 15px;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+
+.cell {
+  width: 60px;
+  height: 60px;
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.15s;
+  position: relative;
+}
+
+.cell:hover {
+  transform: scale(1.05);
+}
+
+.cell.red {
+  background: radial-gradient(circle at 30% 30%, #ff8787, #e63946);
+}
+
+.cell.yellow {
+  background: radial-gradient(circle at 30% 30%, #ffe066, #f4c430);
+}
+
+.cell.drop {
+  animation: drop 0.4s ease-in;
+}
+
+@keyframes drop {
+  from { transform: translateY(-250px); }
+  to { transform: translateY(0); }
+}
+
+#restartBtn {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 10px 20px;
   border: none;
   border-radius: 8px;
   background: #ffcc00;
@@ -45,63 +89,8 @@ h1 {
   transition: transform 0.2s;
 }
 
-.stats button:hover {
+#restartBtn:hover {
   transform: scale(1.05);
-}
-
-.board {
-  display: grid;
-  grid-template-columns: repeat(4, 90px);
-  grid-gap: 12px;
-  justify-content: center;
-}
-
-.card {
-  width: 90px;
-  height: 90px;
-  perspective: 1000px;
-  cursor: pointer;
-}
-
-.card-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.5s;
-  transform-style: preserve-3d;
-}
-
-.card.flipped .card-inner,
-.card.matched .card-inner {
-  transform: rotateY(180deg);
-}
-
-.card-front, .card-back {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2.2rem;
-  backface-visibility: hidden;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
-
-.card-front {
-  background: linear-gradient(135deg, #ff6b6b, #ee5253);
-  color: white;
-  font-size: 1.8rem;
-}
-
-.card-back {
-  background: white;
-  transform: rotateY(180deg);
-}
-
-.card.matched .card-back {
-  background: #d4f8d4;
 }
 
 .win-overlay {
@@ -126,28 +115,26 @@ h1 {
   text-align: center;
 }
 
-.win-box h2 {
-  margin-bottom: 10px;
-}
-
 .win-box button {
   margin-top: 15px;
   padding: 10px 20px;
   border: none;
   border-radius: 8px;
-  background: #667eea;
+  background: #2a5298;
   color: white;
   font-weight: bold;
   cursor: pointer;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 500px) {
   .board {
-    grid-template-columns: repeat(4, 70px);
-    grid-gap: 8px;
+    grid-template-columns: repeat(7, 40px);
+    grid-template-rows: repeat(6, 40px);
+    gap: 5px;
+    padding: 10px;
   }
-  .card {
-    width: 70px;
-    height: 70px;
+  .cell {
+    width: 40px;
+    height: 40px;
   }
 }

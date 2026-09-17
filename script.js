@@ -1,116 +1,108 @@
-const emojis = ['🍕','🎮','🚀','🐶','🎵','🌈','⚽','🍩'];
-const cardValues = [...emojis, ...emojis]; // 8 pairs = 16 cards
+const ROWS = 6;
+const COLS = 7;
+let grid = [];
+let currentPlayer = 'red';
+let gameOver = false;
 
-let board = document.getElementById('board');
-let movesEl = document.getElementById('moves');
-let timerEl = document.getElementById('timer');
-let winOverlay = document.getElementById('winOverlay');
-let winStats = document.getElementById('winStats');
-
-let flippedCards = [];
-let matchedCount = 0;
-let moves = 0;
-let seconds = 0;
-let timerInterval = null;
-let lockBoard = false;
-
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-}
+const boardEl = document.getElementById('board');
+const statusEl = document.getElementById('status');
+const winOverlay = document.getElementById('winOverlay');
+const winMessage = document.getElementById('winMessage');
 
 function createBoard() {
-  board.innerHTML = '';
-  const shuffled = shuffle([...cardValues]);
+  boardEl.innerHTML = '';
+  grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
 
-  shuffled.forEach((value) => {
-    const card = document.createElement('div');
-    card.classList.add('card');
-    card.dataset.value = value;
-
-    card.innerHTML = `
-      <div class="card-inner">
-        <div class="card-front">❓</div>
-        <div class="card-back">${value}</div>
-      </div>
-    `;
-
-    card.addEventListener('click', () => flipCard(card));
-    board.appendChild(card);
-  });
-}
-
-function flipCard(card) {
-  if (lockBoard) return;
-  if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
-
-  if (timerInterval === null) startTimer();
-
-  card.classList.add('flipped');
-  flippedCards.push(card);
-
-  if (flippedCards.length === 2) {
-    moves++;
-    movesEl.textContent = moves;
-    checkMatch();
-  }
-}
-
-function checkMatch() {
-  const [card1, card2] = flippedCards;
-  const isMatch = card1.dataset.value === card2.dataset.value;
-
-  if (isMatch) {
-    card1.classList.add('matched');
-    card2.classList.add('matched');
-    matchedCount += 2;
-    flippedCards = [];
-
-    if (matchedCount === cardValues.length) {
-      endGame();
+  // Build cells column-first so click column logic is easy,
+  // but display row-first (top to bottom)
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      cell.classList.add('cell');
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      cell.addEventListener('click', () => handleClick(c));
+      boardEl.appendChild(cell);
     }
-  } else {
-    lockBoard = true;
-    setTimeout(() => {
-      card1.classList.remove('flipped');
-      card2.classList.remove('flipped');
-      flippedCards = [];
-      lockBoard = false;
-    }, 800);
   }
 }
 
-function startTimer() {
-  timerInterval = setInterval(() => {
-    seconds++;
-    timerEl.textContent = seconds;
-  }, 1000);
+function handleClick(col) {
+  if (gameOver) return;
+
+  // find lowest empty row in this column
+  let targetRow = -1;
+  for (let r = ROWS - 1; r >= 0; r--) {
+    if (!grid[r][col]) {
+      targetRow = r;
+      break;
+    }
+  }
+
+  if (targetRow === -1) return; // column full
+
+  grid[targetRow][col] = currentPlayer;
+  const cellEl = boardEl.querySelector(`[data-row="${targetRow}"][data-col="${col}"]`);
+  cellEl.classList.add(currentPlayer, 'drop');
+
+  if (checkWin(targetRow, col)) {
+    gameOver = true;
+    winMessage.textContent = `${currentPlayer === 'red' ? '🔴 Red' : '🟡 Yellow'} Wins!`;
+    winOverlay.classList.add('active');
+    return;
+  }
+
+  if (isBoardFull()) {
+    gameOver = true;
+    winMessage.textContent = "It's a Draw!";
+    winOverlay.classList.add('active');
+    return;
+  }
+
+  currentPlayer = currentPlayer === 'red' ? 'yellow' : 'red';
+  statusEl.textContent = `Player ${currentPlayer === 'red' ? 'Red' : 'Yellow'}'s Turn`;
 }
 
-function stopTimer() {
-  clearInterval(timerInterval);
-  timerInterval = null;
+function checkWin(row, col) {
+  const directions = [
+    [[0, 1], [0, -1]],   // horizontal
+    [[1, 0], [-1, 0]],   // vertical
+    [[1, 1], [-1, -1]],  // diagonal \
+    [[1, -1], [-1, 1]],  // diagonal /
+  ];
+
+  const player = grid[row][col];
+
+  for (const [dir1, dir2] of directions) {
+    let count = 1;
+    count += countDirection(row, col, dir1[0], dir1[1], player);
+    count += countDirection(row, col, dir2[0], dir2[1], player);
+    if (count >= 4) return true;
+  }
+  return false;
 }
 
-function endGame() {
-  stopTimer();
-  winStats.textContent = `You finished in ${moves} moves and ${seconds} seconds!`;
-  winOverlay.classList.add('active');
+function countDirection(row, col, dRow, dCol, player) {
+  let count = 0;
+  let r = row + dRow;
+  let c = col + dCol;
+
+  while (r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c] === player) {
+    count++;
+    r += dRow;
+    c += dCol;
+  }
+  return count;
+}
+
+function isBoardFull() {
+  return grid[0].every(cell => cell !== null);
 }
 
 function resetGame() {
-  stopTimer();
-  flippedCards = [];
-  matchedCount = 0;
-  moves = 0;
-  seconds = 0;
-  lockBoard = false;
-  timerInterval = null;
-  movesEl.textContent = 0;
-  timerEl.textContent = 0;
+  currentPlayer = 'red';
+  gameOver = false;
+  statusEl.textContent = "Player Red's Turn";
   winOverlay.classList.remove('active');
   createBoard();
 }
